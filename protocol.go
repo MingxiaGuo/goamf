@@ -736,8 +736,8 @@ func (cxt *Decoder) ReadValue() interface{} {
 		return cxt.ReadValueAmf3()
 	}
 
-	return cxt.ReadVal()
-	//return cxt.readValueAmf0()
+	// return cxt.ReadVal()
+	return cxt.readValueAmf0()
 }
 
 func (cxt *Decoder) readValueAmf0() interface{} {
@@ -779,7 +779,9 @@ func (cxt *Decoder) readValueAmf0() interface{} {
 		return nil
 	case amf0_referenceType:
 	case amf0_ecmaArrayType:
+		return cxt.readArrayAmf0()
 	case amf0_objectEndType:
+		return "objectEnd"
 	case amf0_strictArrayType:
 	case amf0_dateType:
 	case amf0_longStringType:
@@ -896,3 +898,178 @@ func lowerFirst(s string) string {
 	s = string(a)
 	return s
 }
+
+// ObjectProperty amf 对象属性
+type ObjectProperty struct {
+	Name  string
+	Value interface{}
+}
+
+// EcmaArray 表示 TypeEcmaArray 类型存储的值
+type EcmaArray []ObjectProperty
+
+func (cxt *Decoder) readArrayAmf0() interface{} {
+
+	ref := cxt.ReadUint32()
+	if cxt.errored() {
+		return nil
+	}
+	if int(ref) == 0 {
+		return nil
+	}
+	// elementCount := int(ref)
+	// result := make(EcmaArray, 0, elementCount)
+
+	// for {
+	// 	var elem ObjectProperty
+	// 	if len, elem.Name := cxt.ReadString(); len == 0 {
+	// 		return
+	// 	}
+	// 	if elem.Value := cxt.readValueAmf0(); elem.Value == nil {
+	// 		return
+	// 	}
+	// 	if elem.Value == amf0_objectEndType && len(elem.Name) == 0 {
+	// 		break
+	// 	}
+	// 	result = appned(result, elem)
+
+	// }
+
+	// return
+
+	// if (ref & 1) == 0 {
+	// 	index := int(ref >> 1)
+	// 	if index >= len(cxt.objectTable) {
+	// 		cxt.saveError(errors.New(fmt.Sprintf("Invalid array reference: %d", index)))
+	// 		return nil
+	// 	}
+	// }
+
+	// elementCount := int(ref)
+	// result := make([]interface{}, elementCount)
+	// cxt.storeObjectInTable(result)
+
+	// for i := 0; i < elementCount; i++ {
+	// 	cxt.
+	// 	result[i] = cxt.readValueAmf0()
+	// }
+	// return result
+
+	// for i := 0; i < elementCount; i++ {
+	// _, key := cxt.ReadString()
+	// // result[i] = cxt.readValueAmf0()
+	// // }
+	// if key == "" {
+	// 	result := make([]interface{}, elementCount)
+	// 	cxt.storeObjectInTable(result)
+	// 	for i := 0; i < elementCount; i++ {
+	// 		result[i] = cxt.readValueAmf0()
+	// 	}
+	// 	return result
+	// }
+
+	// result := &AvmArray{}
+	result := make(map[string]interface{})
+	_, key := cxt.ReadString()
+	// Store the object in the table before doing any decoding.
+	cxt.storeObjectInTable(result)
+
+	for key != "" {
+		result[key] = cxt.readValueAmf0()
+		_, key = cxt.ReadString()
+	}
+	if key == "" && cxt.readValueAmf0() == "objectEnd" {
+		return result
+	}
+	// result.elements = make([]interface{}, elementCount)
+	// for i := 0; i < elementCount; i++ {
+	// 	result.elements[i] = cxt.readValueAmf0()
+	// }
+	// return nil
+
+	return result
+
+	// 	return cxt.objectTable[index]
+	// }
+	// elementCount := int(ref >> 1)
+
+	// associativeCount := binary.BigEndian.Uint32(decoder.u32[:])
+	// obj, err := decoder.readObject(r)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if uint32(len(obj)) != associativeCount {
+	// 	return nil, errors.New("ECMAArray Count error")
+	// }
+	// decoder.refObjects = append(decoder.refObjects, obj)
+	// return obj, nil
+}
+
+// func storeObjectAmf0(obj interface{}){
+
+// case amf0_objectType:
+// 	result := map[string]interface{}{}
+// 	for true {
+// 		c1 := cxt.ReadByte()
+// 		c2 := cxt.ReadByte()
+// 		length := int(c1)<<8 + int(c2)
+// 		name := cxt.ReadStringKnownLength(length)
+// 		result[name] = cxt.readValueAmf0()
+// 	}
+// 	return result
+
+// 	cxt.objectTable = append(cxt.objectTable, obj)
+// }
+
+// func (cxt *Decoder) readArrayAmf0() interface{} {
+// 	ref := cxt.ReadUint29()
+
+// 	if cxt.errored() {
+// 		return nil
+// 	}
+
+// 	// Check the low bit to see if this is a reference
+// 	if (ref & 1) == 0 {
+// 		index := int(ref >> 1)
+// 		if index >= len(cxt.objectTable) {
+// 			cxt.saveError(errors.New(fmt.Sprintf("Invalid array reference: %d", index)))
+// 			return nil
+// 		}
+
+// 		return cxt.objectTable[index]
+// 	}
+
+// 	elementCount := int(ref >> 1)
+
+// 	// Read name-value pairs, if any.
+// 	_, key := cxt.ReadString()
+
+// 	// No name-value pairs, return a flat Go array.
+// 	if key == "" {
+// 		result := make([]interface{}, elementCount)
+// 		cxt.storeObjectInTable(result)
+// 		for i := 0; i < elementCount; i++ {
+// 			result[i] = cxt.ReadValueAmf0()
+// 		}
+// 		return result
+// 	}
+
+// 	result := &AvmArray{}
+// 	result.fields = make(map[string]interface{})
+
+// 	// Store the object in the table before doing any decoding.
+// 	cxt.storeObjectInTable(result)
+
+// 	for key != "" {
+// 		result.fields[key] = cxt.ReadValueAmf0()
+// 		_, key = cxt.ReadString()
+// 	}
+
+// 	// Read dense elements
+// 	result.elements = make([]interface{}, elementCount)
+// 	for i := 0; i < elementCount; i++ {
+// 		result.elements[i] = cxt.ReadValueAmf0()
+// 	}
+
+// 	return result
+// }

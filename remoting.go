@@ -169,9 +169,13 @@ func DecodeMessageBundle(stream io.Reader) (*MessageBundle, error) {
 			// Read an array, however this array is strange because it doesn't use
 			// the reference bit.
 			typeCode := cxt.ReadUint8()
-			if typeCode != 9 {
+			if typeCode != 9 && amfVersion == 3 {
 				return nil, errors.New("Expected Array type code in message body")
 			}
+			if typeCode != 10 && amfVersion == 0 {
+				return nil, errors.New("Expected Array type code in message body")
+			}
+
 			ref := cxt.ReadUint32()
 			itemCount := int(ref)
 			args := make([]interface{}, itemCount)
@@ -196,8 +200,14 @@ func EncodeMessageBundle(cxt *Encoder, bundle *MessageBundle) error {
 	// Write headers
 	cxt.WriteUint16(uint16(len(bundle.Headers)))
 	for _, header := range bundle.Headers {
+		// cxt.WriteUint16(uint16(len(header.Name)))
 		cxt.WriteString(header.Name)
-		cxt.WriteBool(header.MustUnderstand)
+		// cxt.WriteBool(header.MustUnderstand)
+
+		cxt.stream.Write([]byte{0x00, 0x00, 0x00, 0x00, 0x28, 0x02, 0x00, 0x25,
+			0x3f, 0x50, 0x48, 0x50, 0x53, 0x45, 0x53, 0x53, 0x49, 0x44, 0x3d, 0x35, 0x65, 0x69, 0x74, 0x33,
+			0x74, 0x6d, 0x63, 0x66, 0x64, 0x71, 0x6f, 0x69, 0x32, 0x76, 0x64, 0x6c, 0x71, 0x72, 0x68, 0x72,
+			0x73, 0x72, 0x6b, 0x31, 0x30})
 	}
 
 	// Write messages
@@ -205,9 +215,8 @@ func EncodeMessageBundle(cxt *Encoder, bundle *MessageBundle) error {
 	for _, message := range bundle.Messages {
 		cxt.WriteString(message.TargetUri)
 		cxt.WriteString(message.ResponseUri)
-		cxt.WriteUint32(0)
-
-		cxt.WriteUint8(0x0a)
+		// cxt.WriteUint32(0)
+		// cxt.WriteUint8(0x0a)
 		cxt.WriteUint32(0x01) // message body length
 		cxt.WriteUint8(0x11)  // type amf3
 		cxt.WriteValueAmf3(message.Body)
